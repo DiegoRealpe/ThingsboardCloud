@@ -1,9 +1,5 @@
 {
-  "availability-zones:account=844062109895:region=us-east-2": [
-    "us-east-2a",
-    "us-east-2b",
-    "us-east-2c"
-  ],
+  "availability-zones:account=844062109895:region=us-east-2": ["us-east-2a", "us-east-2b", "us-east-2c"],
   "vpc-provider:account=844062109895:filter.vpc-id=vpc-0e9887775f8443b4f:region=us-east-2:returnAsymmetricSubnets=true": {
     "vpcId": "vpc-0e9887775f8443b4f",
     "vpcCidrBlock": "10.0.0.0/16",

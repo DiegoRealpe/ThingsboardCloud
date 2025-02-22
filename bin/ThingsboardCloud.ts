@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import * as cdk from "aws-cdk-lib";
-import { EKSStack } from "../lib/EKSStack";
-import { IndelibleStack } from "../lib/IndelibleStack";
+import * as cdk from 'aws-cdk-lib';
+import { EKSStack } from '../lib/EKSStack';
+import { IndelibleStack } from '../lib/IndelibleStack';
 
 const app = new cdk.App();
-const version = "auto";
+const version = 'auto';
 
 const props = {
   env: {
@@ -13,8 +13,8 @@ const props = {
   },
 };
 
-const indelibleStack = new IndelibleStack(app, "indelibleStack", props);
-new EKSStack(app, "EKSStack", {
+const indelibleStack = new IndelibleStack(app, 'indelibleStack', props);
+new EKSStack(app, 'EKSStack', {
   // indelibleStack.playgroundTable?: dynamo.ITable,                            // such as dynamodb table and S3 bucket here
   // indelibleStack.playgroundBucket?: s3.IBucket,
   ...props,

@@ -4,7 +4,7 @@
 
 // example test. To run these tests, uncomment this file along with the
 // example resource in lib/cdk-eks-thingsboard-stack.ts
-test("SQS Queue Created", () => {
+test('SQS Queue Created', () => {
   //   const app = new cdk.App();
   //     // WHEN
   //   const stack = new CdkEksThingsboard.CdkEksThingsboardStack(app, 'MyTestStack');
