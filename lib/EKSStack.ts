@@ -13,7 +13,10 @@ interface ClusterStackProps extends cdk.StackProps {
   playgroundTable?: dynamo.ITable; // such as dynamodb table and S3 bucket here
   playgroundBucket?: s3.IBucket;
   importedAssetBucket: s3.IBucket;
-  importedSubnets: ec2.ISubnet[];
+  pubSubnetA: ec2.ISubnet;
+  pubSubnetB: ec2.ISubnet;
+  privSubnetA: ec2.ISubnet;
+  privSubnetB: ec2.ISubnet;
 }
 
 export class EKSStack extends cdk.Stack {
@@ -25,6 +28,7 @@ export class EKSStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ClusterStackProps) {
     super(scope, id, props);
     this.props = props;
+    // console.log(props);
 
     this.cluster = new eks.Cluster(this, "hello-eks", {
       mastersRole: this.mainRole,
@@ -34,7 +38,14 @@ export class EKSStack extends cdk.Stack {
         S3_BUCKET_NAME: this.props.importedAssetBucket.bucketName,
       },
       vpcSubnets: [
-        { subnets: [props.importedSubnets[0], props.importedSubnets[1]] },
+        {
+          subnets: [
+            props.pubSubnetA,
+            props.pubSubnetB,
+            props.privSubnetA,
+            props.privSubnetB,
+          ],
+        },
       ], //subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
       version: eks.KubernetesVersion.V1_28,
       defaultCapacity: 0,
@@ -48,10 +59,8 @@ export class EKSStack extends cdk.Stack {
     this.cluster.addNodegroupCapacity("cdk-node-group", {
       nodegroupName: "cdk-node-group",
       instanceTypes: [
-        new ec2.InstanceType("t2.micro"),
-        new ec2.InstanceType("c5.large"),
-        new ec2.InstanceType("c4.large"),
-        new ec2.InstanceType("c3.large"),
+        new ec2.InstanceType("m5.large"),
+        new ec2.InstanceType("m5.xlarge"),
       ],
       minSize: this.cluster.node.tryGetContext("node_group_min_size"),
       desiredSize: 1,

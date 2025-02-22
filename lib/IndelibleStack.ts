@@ -7,8 +7,10 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { getSubnetCidr } from "./utils";
 
 export class IndelibleStack extends cdk.Stack {
-  public publicSubnet: ec2.Subnet;
-  public privateSubnet: ec2.Subnet;
+  public pubSubnetA: ec2.ISubnet;
+  public pubSubnetB: ec2.ISubnet;
+  public privSubnetA: ec2.ISubnet;
+  public privSubnetB: ec2.ISubnet;
   public cluster: eks.Cluster;
   public importedVPC: ec2.IVpc;
   public mainRole: iam.Role;
@@ -57,27 +59,45 @@ export class IndelibleStack extends cdk.Stack {
       this.importedVPC.publicSubnets[0].routeTable;
     const privateCidrBlock1 = getSubnetCidr(cidrSimpleVPC, 3);
     const privateCidrBlock2 = getSubnetCidr(cidrSimpleVPC, 4);
+    const publicCidrBlock1 = getSubnetCidr(cidrSimpleVPC, 5);
+    const publicCidrBlock2 = getSubnetCidr(cidrSimpleVPC, 6);
+
     // Create a Public Subnet
-    this.publicSubnet = new ec2.Subnet(this, "EKSPublicSubnet", {
+    this.pubSubnetA = new ec2.Subnet(this, "EKSPublicSubnetA", {
       vpcId: this.importedVPC.vpcId,
-      availabilityZone: this.importedVPC.availabilityZones[1], //Other subnet is already in AZ0
-      cidrBlock: privateCidrBlock1,
+      availabilityZone: this.availabilityZones[1],
+      cidrBlock: publicCidrBlock1,
       mapPublicIpOnLaunch: true, // Ensures instances get public IPs
     });
-    // Create a Private Subnet
-    this.privateSubnet = new ec2.Subnet(this, "EKSPrivateSubnet", {
+    this.pubSubnetB = new ec2.Subnet(this, "EKSPublicSubnetB", {
       vpcId: this.importedVPC.vpcId,
-      availabilityZone: this.importedVPC.availabilityZones[1],
+      availabilityZone: this.availabilityZones[2],
+      cidrBlock: publicCidrBlock2,
+      mapPublicIpOnLaunch: true, // Ensures instances get public IPs
+    });
+
+    // Create a Private Subnet
+    this.privSubnetA = new ec2.Subnet(this, "EKSPrivateSubnetA", {
+      vpcId: this.importedVPC.vpcId,
+      availabilityZone: this.importedVPC.availabilityZones[0], //Private AZ = 0
+      cidrBlock: privateCidrBlock1,
+      mapPublicIpOnLaunch: false,
+    });
+    this.privSubnetB = new ec2.Subnet(this, "EKSPrivateSubnetB", {
+      vpcId: this.importedVPC.vpcId,
+      availabilityZone: this.importedVPC.availabilityZones[0],
       cidrBlock: privateCidrBlock2,
       mapPublicIpOnLaunch: false,
     });
-    new ec2.CfnSubnetRouteTableAssociation(
-      this,
-      "EKSPublicRouteTableAssociation",
-      {
-        subnetId: this.publicSubnet.subnetId,
-        routeTableId: importedPublicRouteTable.routeTableId,
-      },
-    );
+
+    // TODO: Check if this is needed
+    // new ec2.CfnSubnetRouteTableAssociation(
+    //   this,
+    //   "EKSPublicRouteTableAssociation",
+    //   {
+    //     subnetId: this.publicSubnet.subnetId,
+    //     routeTableId: importedPublicRouteTable.routeTableId,
+    //   },
+    // );
   }
 }

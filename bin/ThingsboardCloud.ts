@@ -19,7 +19,10 @@ new EKSStack(app, "EKSStack", {
   // indelibleStack.playgroundBucket?: s3.IBucket,
   ...props,
   importedAssetBucket: indelibleStack.assetBucket,
-  importedSubnets: [indelibleStack.publicSubnet, indelibleStack.privateSubnet],
+  pubSubnetA: indelibleStack.pubSubnetA,
+  pubSubnetB: indelibleStack.pubSubnetB,
+  privSubnetA: indelibleStack.privSubnetA,
+  privSubnetB: indelibleStack.privSubnetB,
 });
 
 // const addOns: Array<blueprints.ClusterAddOn> = [
