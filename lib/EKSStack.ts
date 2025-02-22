@@ -12,10 +12,11 @@ interface ClusterStackProps extends cdk.StackProps {
   // stack objects that you'll consume is added  with interfaces
   playgroundTable?: dynamo.ITable; // such as dynamodb table and S3 bucket here
   playgroundBucket?: s3.IBucket;
+  importedAssetBucket: s3.IBucket;
   importedSubnets: ec2.ISubnet[];
 }
 
-export class EKSThingsboardStack extends cdk.Stack {
+export class EKSStack extends cdk.Stack {
   private props: ClusterStackProps;
   private cluster: eks.Cluster;
   private importedVPC: ec2.IVpc;
@@ -27,7 +28,11 @@ export class EKSThingsboardStack extends cdk.Stack {
 
     this.cluster = new eks.Cluster(this, "hello-eks", {
       mastersRole: this.mainRole,
+      role: this.mainRole,
       vpc: this.importedVPC,
+      kubectlEnvironment: {
+        S3_BUCKET_NAME: this.props.importedAssetBucket.bucketName,
+      },
       vpcSubnets: [
         { subnets: [props.importedSubnets[0], props.importedSubnets[1]] },
       ], //subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS

@@ -23,5 +23,12 @@
         ]
       }
     ]
+  },
+  "vpc-provider:account=844062109895:filter.vpc-id=vpc-0f670664:region=us-east-2:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-0f670664",
+    "vpcCidrBlock": "172.31.0.0/16",
+    "ownerAccountId": "844062109895",
+    "availabilityZones": [],
+    "subnetGroups": []
   }
 }
