@@ -61,8 +61,8 @@ export class IndelibleStack extends cdk.Stack {
       mapPublicIpOnLaunch: true, // Ensures instances get public IPs
       tags: [
         { key: 'aws-cdk:subnet-type', value: 'Public' },
-        { key: 'kubernetes.io/role/internal-elb', value: '1' }
-      ]
+        { key: 'kubernetes.io/role/internal-elb', value: '1' },
+      ],
     });
     this.pubSubnetB = new ec2.CfnSubnet(this, 'EKSPublicSubnetB', {
       vpcId: this.eksVPC.attrVpcId,
@@ -71,8 +71,8 @@ export class IndelibleStack extends cdk.Stack {
       mapPublicIpOnLaunch: true, // Ensures instances get public IPs
       tags: [
         { key: 'aws-cdk:subnet-type', value: 'Public' },
-        { key: 'kubernetes.io/role/internal-elb', value: '1' }
-      ]
+        { key: 'kubernetes.io/role/internal-elb', value: '1' },
+      ],
     });
     this.pubSubnetC = new ec2.CfnSubnet(this, 'EKSPublicSubnetC', {
       vpcId: this.eksVPC.attrVpcId,
@@ -81,8 +81,8 @@ export class IndelibleStack extends cdk.Stack {
       mapPublicIpOnLaunch: true, // Ensures instances get public IPs
       tags: [
         { key: 'aws-cdk:subnet-type', value: 'Public' },
-        { key: 'kubernetes.io/role/internal-elb', value: '1' }
-      ]
+        { key: 'kubernetes.io/role/internal-elb', value: '1' },
+      ],
     });
     this.pubSubnetD = new ec2.CfnSubnet(this, 'EKSPublicSubnetD', {
       vpcId: this.eksVPC.attrVpcId,
@@ -91,8 +91,8 @@ export class IndelibleStack extends cdk.Stack {
       mapPublicIpOnLaunch: true, // Ensures instances get public IPs
       tags: [
         { key: 'aws-cdk:subnet-type', value: 'Public' },
-        { key: 'kubernetes.io/role/internal-elb', value: '1' }
-      ]
+        { key: 'kubernetes.io/role/internal-elb', value: '1' },
+      ],
     });
     // Private
     this.privSubnetA = new ec2.CfnSubnet(this, 'EKSPrivateSubnetA', {
@@ -100,14 +100,14 @@ export class IndelibleStack extends cdk.Stack {
       availabilityZone: this.availabilityZones[0], //Private AZ = 0
       cidrBlock: privateCidrBlock0,
       mapPublicIpOnLaunch: false,
-      tags: [{ key: 'aws-cdk:subnet-type', value: 'Private' }]
+      tags: [{ key: 'aws-cdk:subnet-type', value: 'Private' }],
     });
     this.privSubnetB = new ec2.CfnSubnet(this, 'EKSPrivateSubnetB', {
       vpcId: this.eksVPC.attrVpcId,
       availabilityZone: this.availabilityZones[0],
       cidrBlock: privateCidrBlock1,
       mapPublicIpOnLaunch: false,
-      tags: [{ key: 'aws-cdk:subnet-type', value: 'Private' }]
+      tags: [{ key: 'aws-cdk:subnet-type', value: 'Private' }],
     });
     // Associations
     const pubSubnetList = [this.pubSubnetA, this.pubSubnetB, this.pubSubnetC, this.pubSubnetD];

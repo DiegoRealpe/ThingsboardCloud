@@ -82,31 +82,17 @@ export class EKSStack extends cdk.Stack {
 
     this.eksVPC = ec2.Vpc.fromVpcAttributes(this, 'importedEKSVPC', {
       vpcId: props.eksVPCID, // Get VPC ID from CfnVPC
-      publicSubnetIds: [
-        props.pubSubnetB_ID,
-        props.pubSubnetC_ID,
-        props.pubSubnetD_ID,
-      ],
+      publicSubnetIds: [props.pubSubnetB_ID, props.pubSubnetC_ID, props.pubSubnetD_ID],
       availabilityZones: this.availabilityZones, // Use available AZs
     });
     this.eksSecurityGroup = ec2.SecurityGroup.fromSecurityGroupId(this, 'importedEKSSecurityGroup', props.eksSecurityGroupID);
 
     this.eksVPC.publicSubnets.forEach((subnet) => {
-      cdk.Annotations.of(subnet).acknowledgeWarning(
-        '@aws-cdk/aws-ec2:noSubnetRouteTableId', 
-        'Will not read route table ID for subnet'
-      );
+      cdk.Annotations.of(subnet).acknowledgeWarning('@aws-cdk/aws-ec2:noSubnetRouteTableId', 'Will not read route table ID for subnet');
     });
-    cdk.Annotations.of(this).acknowledgeWarning(
-      '@aws-cdk/aws-eks:clusterMustManuallyTagSubnet', 
-      'Imported Subnet does not need tag'
-    );
-    cdk.Annotations.of(this).acknowledgeWarning(
-      '@aws-cdk/aws-ec2:ipv4IgnoreEgressRule'
-    );
-    cdk.Annotations.of(this).acknowledgeWarning(
-      '@aws-cdk/aws-autoscaling:desiredCapacitySet'
-    );
+    cdk.Annotations.of(this).acknowledgeWarning('@aws-cdk/aws-eks:clusterMustManuallyTagSubnet', 'Imported Subnet does not need tag');
+    cdk.Annotations.of(this).acknowledgeWarning('@aws-cdk/aws-ec2:ipv4IgnoreEgressRule');
+    cdk.Annotations.of(this).acknowledgeWarning('@aws-cdk/aws-autoscaling:desiredCapacitySet');
     // this.pubSubnetA = ec2.Subnet.fromSubnetId(this, 'importEKSPublicSubnetA', props.pubSubnetA_ID);
     // this.pubSubnetB = ec2.Subnet.fromSubnetId(this, 'importEKSPublicSubnetB', props.pubSubnetB_ID);
     // this.pubSubnetC = ec2.Subnet.fromSubnetId(this, 'importEKSPrivateSubnetA', props.pubSubnetC_ID);
@@ -127,11 +113,11 @@ export class EKSStack extends cdk.Stack {
       kubectlEnvironment: {
         S3_BUCKET_NAME: this.assetBucket.bucketName,
       },
-      vpcSubnets: [{
-        subnets: [
-          ...this.eksVPC.publicSubnets
-        ],
-      }],
+      vpcSubnets: [
+        {
+          subnets: [...this.eksVPC.publicSubnets],
+        },
+      ],
       version: eks.KubernetesVersion.V1_31,
       securityGroup: this.eksSecurityGroup,
       defaultCapacity: 0,
@@ -149,9 +135,7 @@ export class EKSStack extends cdk.Stack {
       autoScalingGroupName: 'eksClusterAutoScalingGroup',
       bootstrapEnabled: true,
       vpcSubnets: {
-        subnets: [
-          ...this.eksVPC.publicSubnets
-        ],
+        subnets: [...this.eksVPC.publicSubnets],
       },
     });
 
@@ -163,53 +147,52 @@ export class EKSStack extends cdk.Stack {
   }
 }
 
+// const cfnclusterName = 'HelloCfnEKSCluster'
+// this.cfncluster = new eks.CfnCluster(this, cfnclusterName, {
+//   name: cfnclusterName,
+//   version: '1.32',
+//   roleArn: props.mainRole.roleArn,
+//   resourcesVpcConfig: {
+//     subnetIds: [props.pubSubnetA_ID, props.pubSubnetB_ID, props.pubSubnetC_ID, props.pubSubnetD_ID],
+//     securityGroupIds: [props.eksSecurityGroupID],
+//     endpointPublicAccess: true,
+//     endpointPrivateAccess: false,
+//   },
+// });
+// const eksNodeGroup = new eks.CfnNodegroup(this, 'EKSCfnNodeGroup', {
+//   clusterName: cfnclusterName, // Name of the EKS cluster
+//   nodegroupName: 'defaultNodeGroup', // Node group name
+//   nodeRole: props.nodeGroupRole.roleArn, // IAM role for the nodes
+//   subnets: [
+//     props.pubSubnetA_ID,
+//     props.pubSubnetB_ID,
+//     props.pubSubnetC_ID,
+//     props.pubSubnetD_ID
+//   ],
+//   scalingConfig: {
+//     desiredSize: 2,
+//     maxSize: 3,
+//     minSize: 0,
+//   },
+//   diskSize: 50, // Disk size in GiB
+//   amiType: 'AL2_x86_64', // Amazon Linux 2 AMI
+//   capacityType: 'ON_DEMAND', // Instance type: On-Demand
+//   instanceTypes: ['t3.micro'], // Equivalent to BURSTABLE3.MICRO
+// });
+// eksNodeGroup.addDependency(this.cfncluster)
 
-    // const cfnclusterName = 'HelloCfnEKSCluster'
-    // this.cfncluster = new eks.CfnCluster(this, cfnclusterName, {
-    //   name: cfnclusterName,
-    //   version: '1.32',
-    //   roleArn: props.mainRole.roleArn,
-    //   resourcesVpcConfig: {
-    //     subnetIds: [props.pubSubnetA_ID, props.pubSubnetB_ID, props.pubSubnetC_ID, props.pubSubnetD_ID],
-    //     securityGroupIds: [props.eksSecurityGroupID],
-    //     endpointPublicAccess: true,
-    //     endpointPrivateAccess: false,
-    //   },
-    // });
-    // const eksNodeGroup = new eks.CfnNodegroup(this, 'EKSCfnNodeGroup', {
-    //   clusterName: cfnclusterName, // Name of the EKS cluster
-    //   nodegroupName: 'defaultNodeGroup', // Node group name
-    //   nodeRole: props.nodeGroupRole.roleArn, // IAM role for the nodes
-    //   subnets: [
-    //     props.pubSubnetA_ID,
-    //     props.pubSubnetB_ID,
-    //     props.pubSubnetC_ID,
-    //     props.pubSubnetD_ID
-    //   ],
-    //   scalingConfig: {
-    //     desiredSize: 2,
-    //     maxSize: 3,
-    //     minSize: 0,
-    //   },
-    //   diskSize: 50, // Disk size in GiB
-    //   amiType: 'AL2_x86_64', // Amazon Linux 2 AMI
-    //   capacityType: 'ON_DEMAND', // Instance type: On-Demand
-    //   instanceTypes: ['t3.micro'], // Equivalent to BURSTABLE3.MICRO
-    // });
-    // eksNodeGroup.addDependency(this.cfncluster)
-
-    // this.cluster.addNodegroupCapacity('cdk-node-group', {
-    //   nodegroupName: 'cdk-node-group',
-    //   instanceTypes: [ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO)],
-    //   // instanceTypes: [new ec2.InstanceType('m5.large'), new ec2.InstanceType('m5.xlarge')],
-    //   capacityType: eks.CapacityType.ON_DEMAND,
-    //   desiredSize: 2,
-    //   nodeRole: this.nodeGroupRole,
-    //   maxSize: 3,
-    //   minSize: 0,
-    //   diskSize: 50,
-    //   amiType: eks.NodegroupAmiType.AL2_X86_64,
-    //   subnets: {
-    //     subnets: [this.pubSubnetA, this.pubSubnetB, this.pubSubnetC, this.pubSubnetD]
-    //   }
-    // });
+// this.cluster.addNodegroupCapacity('cdk-node-group', {
+//   nodegroupName: 'cdk-node-group',
+//   instanceTypes: [ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO)],
+//   // instanceTypes: [new ec2.InstanceType('m5.large'), new ec2.InstanceType('m5.xlarge')],
+//   capacityType: eks.CapacityType.ON_DEMAND,
+//   desiredSize: 2,
+//   nodeRole: this.nodeGroupRole,
+//   maxSize: 3,
+//   minSize: 0,
+//   diskSize: 50,
+//   amiType: eks.NodegroupAmiType.AL2_X86_64,
+//   subnets: {
+//     subnets: [this.pubSubnetA, this.pubSubnetB, this.pubSubnetC, this.pubSubnetD]
+//   }
+// });

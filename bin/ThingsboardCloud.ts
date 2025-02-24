@@ -27,11 +27,8 @@ const eksStack = new EKSStack(app, 'EKSStack', {
   pubSubnetD_ID: indelibleStack.pubSubnetD_ID,
 });
 
-
-const cdk8sApp = new App(); 
-const authChart = new AuthChart(cdk8sApp, 'AuthChart', { mainRoleArn: eksStack.mainRoleArn })
-
-
+const cdk8sApp = new App();
+const authChart = new AuthChart(cdk8sApp, 'AuthChart', { mainRoleArn: eksStack.mainRoleArn });
 
 // const addOns: Array<blueprints.ClusterAddOn> = [
 //   new blueprints.addons.ArgoCDAddOn(),
