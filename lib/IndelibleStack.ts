@@ -3,93 +3,175 @@ import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as eks from 'aws-cdk-lib/aws-eks';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import { getSubnetCidr } from './utils';
 
 export class IndelibleStack extends cdk.Stack {
-  public pubSubnetA: ec2.ISubnet;
-  public pubSubnetB: ec2.ISubnet;
-  public privSubnetA: ec2.ISubnet;
-  public privSubnetB: ec2.ISubnet;
+  public eksVPC: ec2.CfnVPC;
+  public eksSecurityGroup: ec2.CfnSecurityGroup;
+  public pubSubnetA: ec2.CfnSubnet;
+  public pubSubnetB: ec2.CfnSubnet;
+  public pubSubnetC: ec2.CfnSubnet;
+  public pubSubnetD: ec2.CfnSubnet;
+  public privSubnetA: ec2.CfnSubnet;
+  public privSubnetB: ec2.CfnSubnet;
   public cluster: eks.Cluster;
-  public importedVPC: ec2.IVpc;
-  public mainRole: iam.Role;
-  public assetBucket: s3.Bucket;
+  //Exports
+  public eksVPCID: string;
+  public eksSecurityGroupID: string;
+  public pubSubnetA_ID: string;
+  public pubSubnetB_ID: string;
+  public pubSubnetC_ID: string;
+  public pubSubnetD_ID: string;
 
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
-    this.mainRole = new iam.Role(this, 'eksMainRole', {
-      assumedBy: new iam.CompositePrincipal(new iam.ArnPrincipal('arn:aws:iam::844062109895:role/cdk-hnb659fds-deploy-role-844062109895-us-east-2'), new iam.ServicePrincipal('eks.amazonaws.com')),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEKSClusterPolicy'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEKSServicePolicy'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEC2ContainerRegistryReadOnly'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEC2FullAccess'), // Required for networking
-        iam.ManagedPolicy.fromAwsManagedPolicyName('IAMFullAccess'), // Required for passing IAM roles
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AutoScalingFullAccess'), // Required for node autoscaling
-      ],
+    // VPC
+    const cidrEKSVPC: string = '10.1.0.0/16';
+    this.eksVPC = new ec2.CfnVPC(this, 'EKSVPC', {
+      cidrBlock: cidrEKSVPC,
+    });
+    // Route Table and IGW stuff
+    const internetGateway = new ec2.CfnInternetGateway(this, 'EKSInternetGateway', {});
+    new ec2.CfnVPCGatewayAttachment(this, 'EKSVPCGatewayAttachment', {
+      vpcId: this.eksVPC.attrVpcId,
+      internetGatewayId: internetGateway.ref,
     });
 
-    this.assetBucket = new s3.Bucket(this, 'assetBucket', {
-      bucketName: 'assetbucket-eksthingsboard',
-      versioned: false,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      autoDeleteObjects: true,
+    // Route Tables
+    const publicRouteTable = new ec2.CfnRouteTable(this, 'EKSPublicRouteTable', {
+      vpcId: this.eksVPC.attrVpcId,
     });
-    this.assetBucket.grantReadWrite(this.mainRole);
-
-    this.importedVPC = ec2.Vpc.fromLookup(this, 'SimpleVPC', {
-      // vpcId: 'vpc-0f670664' // Default
-      vpcId: 'vpc-0e9887775f8443b4f', // SimpleVpc
+    const privateRouteTable = new ec2.CfnRouteTable(this, 'EKSPrivateRouteTable', {
+      vpcId: this.eksVPC.attrVpcId,
     });
 
-    const cidrSimpleVPC: string = '10.0.0.0/16';
-    // Get first existing public subnet
-    const importedPublicRouteTable = this.importedVPC.publicSubnets[0].routeTable;
-    const privateCidrBlock1 = getSubnetCidr(cidrSimpleVPC, 3);
-    const privateCidrBlock2 = getSubnetCidr(cidrSimpleVPC, 4);
-    const publicCidrBlock1 = getSubnetCidr(cidrSimpleVPC, 5);
-    const publicCidrBlock2 = getSubnetCidr(cidrSimpleVPC, 6);
-
-    // Create a Public Subnet
-    this.pubSubnetA = new ec2.Subnet(this, 'EKSPublicSubnetA', {
-      vpcId: this.importedVPC.vpcId,
+    // Subnets
+    const privateCidrBlock0 = getSubnetCidr(cidrEKSVPC, 0);
+    const privateCidrBlock1 = getSubnetCidr(cidrEKSVPC, 1);
+    const publicCidrBlock0 = getSubnetCidr(cidrEKSVPC, 2);
+    const publicCidrBlock1 = getSubnetCidr(cidrEKSVPC, 3);
+    const publicCidrBlock2 = getSubnetCidr(cidrEKSVPC, 4);
+    const publicCidrBlock3 = getSubnetCidr(cidrEKSVPC, 5);
+    // Public
+    this.pubSubnetA = new ec2.CfnSubnet(this, 'EKSPublicSubnetA', {
+      vpcId: this.eksVPC.attrVpcId,
+      availabilityZone: this.availabilityZones[1],
+      cidrBlock: publicCidrBlock0,
+      mapPublicIpOnLaunch: true, // Ensures instances get public IPs
+      tags: [
+        { key: 'aws-cdk:subnet-type', value: 'Public' },
+        { key: 'kubernetes.io/role/internal-elb', value: '1' }
+      ]
+    });
+    this.pubSubnetB = new ec2.CfnSubnet(this, 'EKSPublicSubnetB', {
+      vpcId: this.eksVPC.attrVpcId,
       availabilityZone: this.availabilityZones[1],
       cidrBlock: publicCidrBlock1,
       mapPublicIpOnLaunch: true, // Ensures instances get public IPs
+      tags: [
+        { key: 'aws-cdk:subnet-type', value: 'Public' },
+        { key: 'kubernetes.io/role/internal-elb', value: '1' }
+      ]
     });
-    this.pubSubnetB = new ec2.Subnet(this, 'EKSPublicSubnetB', {
-      vpcId: this.importedVPC.vpcId,
+    this.pubSubnetC = new ec2.CfnSubnet(this, 'EKSPublicSubnetC', {
+      vpcId: this.eksVPC.attrVpcId,
       availabilityZone: this.availabilityZones[2],
       cidrBlock: publicCidrBlock2,
       mapPublicIpOnLaunch: true, // Ensures instances get public IPs
+      tags: [
+        { key: 'aws-cdk:subnet-type', value: 'Public' },
+        { key: 'kubernetes.io/role/internal-elb', value: '1' }
+      ]
     });
-
-    // Create a Private Subnet
-    this.privSubnetA = new ec2.Subnet(this, 'EKSPrivateSubnetA', {
-      vpcId: this.importedVPC.vpcId,
-      availabilityZone: this.importedVPC.availabilityZones[0], //Private AZ = 0
+    this.pubSubnetD = new ec2.CfnSubnet(this, 'EKSPublicSubnetD', {
+      vpcId: this.eksVPC.attrVpcId,
+      availabilityZone: this.availabilityZones[2],
+      cidrBlock: publicCidrBlock3,
+      mapPublicIpOnLaunch: true, // Ensures instances get public IPs
+      tags: [
+        { key: 'aws-cdk:subnet-type', value: 'Public' },
+        { key: 'kubernetes.io/role/internal-elb', value: '1' }
+      ]
+    });
+    // Private
+    this.privSubnetA = new ec2.CfnSubnet(this, 'EKSPrivateSubnetA', {
+      vpcId: this.eksVPC.attrVpcId,
+      availabilityZone: this.availabilityZones[0], //Private AZ = 0
+      cidrBlock: privateCidrBlock0,
+      mapPublicIpOnLaunch: false,
+      tags: [{ key: 'aws-cdk:subnet-type', value: 'Private' }]
+    });
+    this.privSubnetB = new ec2.CfnSubnet(this, 'EKSPrivateSubnetB', {
+      vpcId: this.eksVPC.attrVpcId,
+      availabilityZone: this.availabilityZones[0],
       cidrBlock: privateCidrBlock1,
       mapPublicIpOnLaunch: false,
+      tags: [{ key: 'aws-cdk:subnet-type', value: 'Private' }]
     });
-    this.privSubnetB = new ec2.Subnet(this, 'EKSPrivateSubnetB', {
-      vpcId: this.importedVPC.vpcId,
-      availabilityZone: this.importedVPC.availabilityZones[0],
-      cidrBlock: privateCidrBlock2,
-      mapPublicIpOnLaunch: false,
+    // Associations
+    const pubSubnetList = [this.pubSubnetA, this.pubSubnetB, this.pubSubnetC, this.pubSubnetD];
+    const privSubnetList = [this.privSubnetA, this.privSubnetB];
+    pubSubnetList.forEach((subnet, index) => {
+      new ec2.CfnSubnetRouteTableAssociation(this, `pubAssoc${index}`, {
+        subnetId: subnet.attrSubnetId,
+        routeTableId: publicRouteTable.ref,
+      });
+    });
+    privSubnetList.forEach((subnet, index) => {
+      new ec2.CfnSubnetRouteTableAssociation(this, `privAssoc${index}`, {
+        subnetId: subnet.attrSubnetId,
+        routeTableId: privateRouteTable.ref,
+      });
     });
 
-    // TODO: Check if this is needed
-    // new ec2.CfnSubnetRouteTableAssociation(
-    //   this,
-    //   "EKSPublicRouteTableAssociation",
-    //   {
-    //     subnetId: this.publicSubnet.subnetId,
-    //     routeTableId: importedPublicRouteTable.routeTableId,
-    //   },
-    // );
+    // Public Routing
+    new ec2.CfnRoute(this, 'EKSInternetRoute', {
+      routeTableId: publicRouteTable.ref,
+      destinationCidrBlock: '0.0.0.0/0',
+      gatewayId: internetGateway.ref,
+    });
+    //Private Routing
+    const natEip = new ec2.CfnEIP(this, 'NatEIP');
+    const natGateway = new ec2.CfnNatGateway(this, 'natGateway', {
+      allocationId: natEip.attrAllocationId,
+      subnetId: this.pubSubnetA.attrSubnetId, // Placing NAT Gateway in Public Subnet A
+    });
+    new ec2.CfnRoute(this, 'privateNatRoute', {
+      routeTableId: privateRouteTable.ref,
+      destinationCidrBlock: '0.0.0.0/0',
+      natGatewayId: natGateway.ref,
+    });
+
+    //Security Groups
+    this.eksSecurityGroup = new ec2.CfnSecurityGroup(this, 'eksSecurityGroup', {
+      groupDescription: 'EKS Security Group',
+      groupName: 'eksSecurityGroup',
+      vpcId: this.eksVPC.attrVpcId,
+      securityGroupIngress: [
+        {
+          ipProtocol: 'tcp',
+          cidrIp: '0.0.0.0/0', // Equivalent to ec2.Peer.anyIpv4()
+          fromPort: 22,
+          toPort: 22,
+          description: 'Allow SSH access from any IPv4',
+        },
+        {
+          ipProtocol: 'tcp',
+          cidrIp: '0.0.0.0/0', // Equivalent to ec2.Peer.anyIpv4()
+          fromPort: 443,
+          toPort: 443,
+          description: 'Allow HTTPS access from any IPv4',
+        },
+      ],
+    });
+
+    // Exports
+    this.eksVPCID = this.eksVPC.attrVpcId;
+    this.eksSecurityGroupID = this.eksSecurityGroup.attrId;
+    this.pubSubnetA_ID = this.pubSubnetA.attrSubnetId;
+    this.pubSubnetB_ID = this.pubSubnetB.attrSubnetId;
+    this.pubSubnetC_ID = this.pubSubnetC.attrSubnetId;
+    this.pubSubnetD_ID = this.pubSubnetD.attrSubnetId;
   }
 }

@@ -2,6 +2,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { EKSStack } from '../lib/EKSStack';
 import { IndelibleStack } from '../lib/IndelibleStack';
+import { App } from 'cdk8s';
+import { AuthChart } from '../lib/authChart';
 
 const app = new cdk.App();
 const version = 'auto';
@@ -14,16 +16,22 @@ const props = {
 };
 
 const indelibleStack = new IndelibleStack(app, 'indelibleStack', props);
-new EKSStack(app, 'EKSStack', {
-  // indelibleStack.playgroundTable?: dynamo.ITable,                            // such as dynamodb table and S3 bucket here
-  // indelibleStack.playgroundBucket?: s3.IBucket,
+const eksStack = new EKSStack(app, 'EKSStack', {
   ...props,
-  importedAssetBucket: indelibleStack.assetBucket,
-  pubSubnetA: indelibleStack.pubSubnetA,
-  pubSubnetB: indelibleStack.pubSubnetB,
-  privSubnetA: indelibleStack.privSubnetA,
-  privSubnetB: indelibleStack.privSubnetB,
+  // importedAssetBucket: indelibleStack.assetBucket,
+  eksSecurityGroupID: indelibleStack.eksSecurityGroupID,
+  eksVPCID: indelibleStack.eksVPCID,
+  pubSubnetA_ID: indelibleStack.pubSubnetA_ID,
+  pubSubnetB_ID: indelibleStack.pubSubnetB_ID,
+  pubSubnetC_ID: indelibleStack.pubSubnetC_ID,
+  pubSubnetD_ID: indelibleStack.pubSubnetD_ID,
 });
+
+
+const cdk8sApp = new App(); 
+const authChart = new AuthChart(cdk8sApp, 'AuthChart', { mainRoleArn: eksStack.mainRoleArn })
+
+
 
 // const addOns: Array<blueprints.ClusterAddOn> = [
 //   new blueprints.addons.ArgoCDAddOn(),
