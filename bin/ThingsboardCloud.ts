@@ -2,8 +2,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { EKSStack } from '../lib/EKSStack';
 import { IndelibleStack } from '../lib/IndelibleStack';
-import { App } from 'cdk8s';
-import { AuthChart } from '../lib/authChart';
 
 const app = new cdk.App();
 const version = 'auto';
@@ -26,9 +24,6 @@ const eksStack = new EKSStack(app, 'EKSStack', {
   pubSubnetC_ID: indelibleStack.pubSubnetC_ID,
   pubSubnetD_ID: indelibleStack.pubSubnetD_ID,
 });
-
-const cdk8sApp = new App();
-const authChart = new AuthChart(cdk8sApp, 'AuthChart', { mainRoleArn: eksStack.mainRoleArn });
 
 // const addOns: Array<blueprints.ClusterAddOn> = [
 //   new blueprints.addons.ArgoCDAddOn(),

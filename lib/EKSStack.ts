@@ -6,6 +6,8 @@ import * as eks from 'aws-cdk-lib/aws-eks';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as dynamo from 'aws-cdk-lib/aws-dynamodb';
 import { KubectlV31Layer } from '@aws-cdk/lambda-layer-kubectl-v31';
+import { App } from 'cdk8s';
+import { AuthChart } from './authChart';
 
 // blueprints.HelmAddOn.validateHelmVersions = true; // optional if you would like to check for newer versions
 interface ClusterStackProps extends cdk.StackProps {
@@ -58,25 +60,26 @@ export class EKSStack extends cdk.Stack {
         iam.ManagedPolicy.fromAwsManagedPolicyName('AutoScalingFullAccess'), // Required for node autoscaling
       ],
     });
-    this.nodeGroupRole = new iam.Role(this, 'EKSNodeGroupRole', {
-      description: 'Node group role for worker nodes in the EKS cluster',
-      assumedBy: new iam.CompositePrincipal(
-        new iam.ArnPrincipal('arn:aws:iam::844062109895:role/cdk-hnb659fds-deploy-role-844062109895-us-east-2'),
-        new iam.ServicePrincipal('ec2.amazonaws.com'),
-        new iam.ServicePrincipal('eks.amazonaws.com'),
-      ),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEKSWorkerNodePolicy'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEC2ContainerRegistryReadOnly'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEKS_CNI_Policy'),
-      ],
-    });
+
+    // this.nodeGroupRole = new iam.Role(this, 'EKSNodeGroupRole', {
+    //   description: 'Node group role for worker nodes in the EKS cluster',
+    //   assumedBy: new iam.CompositePrincipal(
+    //     new iam.ArnPrincipal('arn:aws:iam::844062109895:role/cdk-hnb659fds-deploy-role-844062109895-us-east-2'),
+    //     new iam.ServicePrincipal('ec2.amazonaws.com'),
+    //     new iam.ServicePrincipal('eks.amazonaws.com'),
+    //   ),
+    //   managedPolicies: [
+    //     iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEKSWorkerNodePolicy'),
+    //     iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEC2ContainerRegistryReadOnly'),
+    //     iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEKS_CNI_Policy'),
+    //   ],
+    // });
     this.assetBucket = new s3.Bucket(this, 'assetBucket', {
       bucketName: 'assetbucket-eksthingsboard',
       versioned: false,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       autoDeleteObjects: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
     this.assetBucket.grantReadWrite(this.mainRole);
 
@@ -125,12 +128,14 @@ export class EKSStack extends cdk.Stack {
       clusterLogging: [eks.ClusterLoggingTypes.API, eks.ClusterLoggingTypes.AUTHENTICATOR, eks.ClusterLoggingTypes.AUDIT],
       kubectlLayer: new KubectlV31Layer(this, 'kubectl'),
       endpointAccess: eks.EndpointAccess.PUBLIC_AND_PRIVATE,
+      authenticationMode: eks.AuthenticationMode.API_AND_CONFIG_MAP
     });
     const autoScalingGroup = this.cluster.addAutoScalingGroupCapacity('EC2Capacity', {
       instanceType: new ec2.InstanceType('t3.micro'),
       desiredCapacity: 2,
       minCapacity: 2,
       maxCapacity: 3,
+      mapRole: true,
       allowAllOutbound: false,
       autoScalingGroupName: 'eksClusterAutoScalingGroup',
       bootstrapEnabled: true,
@@ -139,14 +144,63 @@ export class EKSStack extends cdk.Stack {
       },
     });
 
+    new eks.CfnAccessEntry(this, 'accessEntryConsole', {
+      clusterName: this.cluster.clusterName,
+      principalArn: 'arn:aws:iam::844062109895:role/HumanRole',
+      type: 'STANDARD',
+      accessPolicies: [{
+        accessScope: {
+          type: 'cluster'
+        },
+        policyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy',
+      }],
+    });
+    // new eks.CfnAccessEntry(this, 'accessEntryMainRole', {
+    //   principalArn: this.mainRole.roleArn,
+    //   clusterName: this.cluster.clusterName,
+    //   type: 'EC2_LINUX',
+    //   accessPolicies: [{
+    //     accessScope: {
+    //       type: 'cluster'
+    //     },
+    //     policyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy',
+    //   }],
+    // })
+    // new eks.AccessEntry(this, 'accessEntryMainRole', {
+    //   cluster: this.cluster,
+    //   principal: this.mainRoleArn,
+    //   accessEntryName: 'accessEntryForMainRole',
+    //   accessEntryType: eks.AccessEntryType.EC2_LINUX,
+    //   accessPolicies: [
+    //     eks.AccessPolicy.fromAccessPolicyName('AmazonEKSClusterAdminPolicy', {
+    //       accessScopeType: eks.AccessScopeType.CLUSTER,
+    //     }),
+    //   ],
+    // });
+
     // Output the Cluster Name, Config Command, and Masters Role ARN
     this.clusterName = this.cluster.clusterName;
     this.clusterARN = this.cluster.clusterArn;
     this.configCommand = `aws eks update-kubeconfig --name ${this.cluster.clusterName} --region ${this.region}`;
     this.mainRoleArn = this.mainRole.roleArn;
+
+    // const cdk8sApp = new App();
+    // const authChart = new AuthChart(cdk8sApp, 'AuthChart', { mainRoleArn: this.mainRoleArn });
+    // this.cluster.addCdk8sChart('authChart', authChart)
+    // new eks.KubernetesPatch(this, 'hello-kub-deployment-label', {
+    //   cluster: this.cluster,
+    //   resourceName: 'ConfigMap/aws-auth',
+    //   applyPatch: {'spec': {'replicas': 5}},
+    //   restorePatch: {'spec': {'replicas': 3}}
+    // })
   }
 }
 
+//   cluster=cluster,
+//   resource_name="deployment/hello-kubernetes",
+//   apply_patch={"spec": {"replicas": 5}},
+//   restore_patch={"spec": {"replicas": 3}}
+// )
 // const cfnclusterName = 'HelloCfnEKSCluster'
 // this.cfncluster = new eks.CfnCluster(this, cfnclusterName, {
 //   name: cfnclusterName,
