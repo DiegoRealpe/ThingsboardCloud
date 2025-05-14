@@ -104,8 +104,8 @@ export class EKSStack extends cdk.Stack {
     // cdk.Annotations.of(this.pubSubnetC).acknowledgeWarning('@aws-cdk/aws-ec2:noSubnetRouteTableId', 'Will not read route table ID for subnet');
     // cdk.Annotations.of(this.pubSubnetD).acknowledgeWarning('@aws-cdk/aws-ec2:noSubnetRouteTableId', 'Will not read route table ID for subnet');
 
-    const clusterName = 'ThingsboardEKSCluster';
-    this.cluster = new eks.Cluster(this, 'eksClusterID', {
+    const clusterName = 'ThingsboardEKSCluster-blue';
+    this.cluster = new eks.Cluster(this, 'eksClusterID-blue', {
       mastersRole: this.mainRole,
       clusterName: clusterName,
       role: this.mainRole,
@@ -146,7 +146,7 @@ export class EKSStack extends cdk.Stack {
 
     new eks.CfnAccessEntry(this, 'accessEntryConsole', {
       clusterName: this.cluster.clusterName,
-      principalArn: 'arn:aws:iam::844062109895:role/HumanRole',
+      principalArn: 'arn:aws:iam::844062109895:role/TheHuman',
       type: 'STANDARD',
       accessPolicies: [{
         accessScope: {
